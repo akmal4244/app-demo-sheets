@@ -9,6 +9,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <script>
+    // Immediate check before rendering body to avoid UI flicker
+    if (!localStorage.getItem("token")) {
+      window.location.replace("login.html");
+    }
+  </script>
+
   <style>
     :root {
       --bg-gradient: radial-gradient(circle at 0% 0%, #1a103c 0%, #0d0822 50%, #05030f 100%);
@@ -109,6 +116,8 @@
       margin-bottom: 32px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       padding-bottom: 20px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     h1 {
@@ -268,6 +277,8 @@
     .actions {
       display: flex;
       gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .btn-action {
@@ -294,6 +305,17 @@
     .btn-action:active {
       transform: scale(0.97);
     }
+
+    #logoutBtn {
+      background: rgba(244, 63, 94, 0.1);
+      border-color: rgba(244, 63, 94, 0.2);
+      color: #fda4af;
+    }
+
+    #logoutBtn:hover {
+      background: rgba(244, 63, 94, 0.2);
+      border-color: rgba(244, 63, 94, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -305,6 +327,10 @@
         <button id="refreshBtn" class="btn-action" onclick="loadSubmissions()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
           Refresh
+        </button>
+        <button id="logoutBtn" class="btn-action" onclick="logout()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Log out
         </button>
         <span id="countBadge" class="badge" style="display: none;">0 submissions</span>
       </div>
@@ -328,6 +354,11 @@
     const refreshBtn = document.getElementById("refreshBtn");
     
     const URL = "https://script.google.com/macros/s/AKfycbxJS2eBqb4Z7Exhtf_TBB555ErwQXPHadCvTsMC09DLhSgACVONc8E0jBGTbFufOfDA6w/exec";
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "login.html";
+    }
 
     function showStatus(message, isError = false) {
       listElement.style.display = "none";
@@ -357,6 +388,12 @@
     }
 
     async function loadSubmissions() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "login.html";
+        return;
+      }
+
       // Enter loading state
       loaderElement.style.display = "flex";
       listElement.style.display = "none";
@@ -365,9 +402,17 @@
       refreshBtn.disabled = true;
 
       try {
-        // EXACT shape as requested to avoid CORS issues
-        const res = await fetch(URL);
+        // EXACT shape as requested
+        const params = new URLSearchParams({ action: "getContacts", token });
+        const res = await fetch(URL + "?" + params.toString());
         const data = await res.json();
+
+        if (data.ok === false) {
+          // invalid/expired token
+          localStorage.removeItem("token");
+          window.location.href = "login.html";
+          return;
+        }
 
         if (data && data.ok && Array.isArray(data.contacts)) {
           const contacts = data.contacts;
@@ -376,7 +421,7 @@
             showStatus("No submissions yet");
           } else {
             // Sort contacts descending by date if possible
-            contacts.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            contacts.sort((a, b) => new Date(b.created_at || b["created_at "] || 0) - new Date(a.created_at || a["created_at "] || 0));
 
             listElement.innerHTML = "";
             contacts.forEach((contact, index) => {
