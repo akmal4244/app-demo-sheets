@@ -380,6 +380,12 @@
 
             listElement.innerHTML = "";
             contacts.forEach((contact, index) => {
+              // Normalize keys to handle fields with trailing space like "name "
+              const normalized = {};
+              for (const key in contact) {
+                normalized[key.trim()] = contact[key];
+              }
+
               const li = document.createElement("li");
               li.style.animationDelay = `${index * 0.05}s`;
 
@@ -389,33 +395,33 @@
 
               const nameSpan = document.createElement("span");
               nameSpan.className = "contact-name";
-              nameSpan.textContent = contact.name || "Anonymous";
+              nameSpan.textContent = normalized.name || "Anonymous";
 
               const emailSpan = document.createElement("span");
               emailSpan.className = "contact-email";
-              emailSpan.textContent = contact.email ? `(${contact.email})` : "";
+              emailSpan.textContent = normalized.email ? `(${normalized.email})` : "";
 
               headerDiv.appendChild(nameSpan);
               headerDiv.appendChild(emailSpan);
 
               // Include phone if present
-              if (contact.phone) {
+              if (normalized.phone) {
                 const phoneSpan = document.createElement("span");
                 phoneSpan.className = "contact-phone";
-                phoneSpan.textContent = contact.phone;
+                phoneSpan.textContent = normalized.phone;
                 headerDiv.appendChild(phoneSpan);
               }
 
               const msgParagraph = document.createElement("p");
               msgParagraph.className = "contact-message";
-              msgParagraph.textContent = contact.message || "";
+              msgParagraph.textContent = normalized.message || "";
 
               const footerDiv = document.createElement("div");
               footerDiv.className = "contact-footer";
 
               const dateSmall = document.createElement("small");
               dateSmall.className = "contact-date";
-              dateSmall.textContent = formatDate(contact.created_at);
+              dateSmall.textContent = formatDate(normalized.created_at);
 
               footerDiv.appendChild(dateSmall);
 
